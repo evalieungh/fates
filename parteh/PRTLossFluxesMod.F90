@@ -62,6 +62,7 @@ module PRTLossFluxesMod
   public :: PRTDeciduousTurnover
   public :: PRTMaintTurnover
   public :: PRTBurnLosses
+  public :: PRTGrazeLosses
   public :: PRTPhenologyFlush
   public :: PRTReproRelease
   public :: PRTDamageLosses
@@ -278,7 +279,7 @@ contains
     ! with burn. There is only one destiny for burned mass within
     ! the organ, and that is outside the plant.  
     ! It is also assumed that non PARTEH parts of the code (ie the fire-model)
-    ! will decide what to do with the burned mass (i.e. sent it to the litter
+    ! will decide what to do with the burned mass (i.e. send it to the litter
     ! pool or send to atmosphere, or.. other?)
     ! ----------------------------------------------------------------------------------
 
@@ -324,6 +325,63 @@ contains
        
      end associate
   end subroutine PRTBurnLosses
+    
+  ! =====================================================================================
+
+  subroutine PRTGrazeLosses(prt, organ_id, mass_fraction)
+
+    ! ----------------------------------------------------------------------------------
+    ! This subroutine was copied and modified from PRTBurnLosses. 
+    ! It assumes that there is no re-translocation associated
+    ! with grazing. There is only one destiny for grazed mass within
+    ! the organ, and that is outside the plant.  
+    ! It is also assumed that non PARTEH parts of the code
+    ! will decide what to do with the grazed mass (i.e. send it to the litter
+    ! pool or send to atmosphere, or.. other?)
+    ! ----------------------------------------------------------------------------------
+
+    class(prt_vartypes) :: prt
+    integer,intent(in)  :: organ_id
+    real(r8),intent(in) :: mass_fraction
+
+    integer             :: i_pos          ! position index
+    integer             :: i_var          ! index for the variable of interest 
+    integer             :: i_var_of_organ ! loop counter for all element in this organ
+    integer             :: element_id     ! Element id of the turnover pool
+    real(r8)            :: grazed_mass    ! Grazed mass of each element, in eahc
+                                          ! position, in the organ of interest
+     
+    associate(organ_map => prt_global%organ_map)
+
+       ! This is the total number of state variables associated
+       ! with this particular organ
+
+       do i_var_of_organ = 1, organ_map(organ_id)%num_vars
+          
+          i_var = organ_map(organ_id)%var_id(i_var_of_organ)
+          
+          element_id = prt_global%state_descriptor(i_var)%element_id
+          
+          ! Loop over all of the coordinate ids
+          do i_pos = 1,prt_global%state_descriptor(i_var)%num_pos
+             
+             ! The mass that is leaving the plant
+             grazed_mass = mass_fraction * prt%variables(i_var)%val(i_pos)
+             
+             ! Track the amount of mass being grazed (+ is amount lost)
+             prt%variables(i_var)%grazed(i_pos) = prt%variables(i_var)%grazed(i_pos) &
+                  + grazed_mass
+             
+             ! Update the state of the pool to reflect the mass lost
+             prt%variables(i_var)%val(i_pos)    = prt%variables(i_var)%val(i_pos) &
+                  - grazed_mass
+             
+          end do
+          
+       end do
+       
+     end associate
+  end subroutine PRTGrazeLosses
     
   ! =====================================================================================
 
