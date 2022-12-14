@@ -402,6 +402,7 @@ contains
     real(r8) :: total_c                      ! total carbon of plant [kg]
     real(r8) :: leaf_burn_frac               ! fraction of leaves burned in fire
                                              ! for both woody and grass species
+    real(r8) :: leaf_grazed_frac             ! fraction of leaf/tissue grazed
     real(r8) :: leaf_m                       ! leaf mass during partial burn calculations
     logical  :: found_youngest_primary       ! logical for finding the first primary forest patch
     integer  :: min_nocomp_pft, max_nocomp_pft, i_nocomp_pft
@@ -840,7 +841,7 @@ contains
 
                             ! Some of of the leaf mass from living plants has been
                             ! burned off.  Here, we remove that mass, and
-                            ! tally it in the flux we sent to the atmosphere
+                            ! tally it in the flux we send to the atmosphere
 
                             if(prt_params%woody(currentCohort%pft) == itrue)then
                                leaf_burn_frac = currentCohort%fraction_crown_burned
@@ -883,9 +884,12 @@ contains
 
                                currentSite%mass_balance(el)%burn_flux_to_atm = &
                                     currentSite%mass_balance(el)%burn_flux_to_atm + &
+                                    leaf_grazed_frac * leaf_m * nc%n + &
                                     leaf_burn_frac * leaf_m * nc%n
                             end do
 
+                            leaf_grazed_frac = 
+                            
                             ! Here the mass is removed from the plant
 
                             if(int(prt_params%woody(currentCohort%pft)) == itrue)then
@@ -894,6 +898,14 @@ contains
                                call PRTBurnLosses(nc%prt, leaf_organ, leaf_burn_frac)
                                call PRTBurnLosses(nc%prt, sapw_organ, leaf_burn_frac)
                                call PRTBurnLosses(nc%prt, struct_organ, leaf_burn_frac)
+                            endif
+                            
+                             if(int(prt_params%woody(currentCohort%pft)) == itrue)then
+                               call PRTGrazedLosses(nc%prt, leaf_organ, leaf_grazed_frac)
+                            else
+                               call PRTGrazedLosses(nc%prt, leaf_organ, leaf_grazed_frac)
+                               call PRTGrazedLosses(nc%prt, sapw_organ, leaf_grazed_frac)
+                               call PRTGrazedLosses(nc%prt, struct_organ, leaf_grazed_frac)
                             endif
 
                             currentCohort%fraction_crown_burned = 0.0_r8
